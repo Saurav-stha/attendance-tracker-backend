@@ -44,7 +44,7 @@ class AuthController extends Controller
             'role' => 2
         ]);
 
-        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otp = substr(str_shuffle('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 6);
 
         Otp::where('email', $request->email)->delete();
         Otp::create([
