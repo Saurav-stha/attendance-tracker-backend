@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Otp;
 use App\Models\User;
 use App\RespondTrait;
 use Carbon\Carbon;
@@ -15,15 +16,6 @@ class AuthController extends Controller
 {
 
     use RespondTrait;
-
-    public $otp;
-    public $otp_expiry;
-
-    public function __construct()
-    {
-        $this->otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $this->otp_expiry = Carbon::now()->addMinutes(2);
-    }
 
     public function signup(Request $request)
     {
@@ -51,10 +43,17 @@ class AuthController extends Controller
             'role' => 2
         ]);
 
-        try {
-            $request->user()->sendEmailVerificationNotification();
+        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-            Mail::send('emails.registration-otp', ['otp' => $this->otp], function ($message) use ($request) {
+        Otp::where('email', $request->email)->delete();
+        Otp::create([
+            'email' => $request->email,
+            'otp' => Hash::make($otp),
+            'expires_at' => Carbon::now()->addMinutes(10)
+        ]);
+
+        try {
+            Mail::send('emails.registration-otp', ['otp' => $otp, 'username' => $user->name], function ($message) use ($request) {
                 $message->to($request->email)
                     ->subject('Your OTP for Account Verification');
             });
