@@ -7,6 +7,7 @@ use App\Models\Otp;
 use App\Models\User;
 use App\RespondTrait;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -104,6 +105,102 @@ class AuthController extends Controller
         return response()->json(['status' => true, 'message' => 'Email verified successfully']);
     }
 
+    public function login(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $credentials = $request->only('email', 'password');
+
+        if (!Auth::attempt($credentials)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid login credentials'
+            ], 401);
+        }
+
+        $user = Auth::user();
+
+        if ($user->status !== 1) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Account is inactive or not verified'
+            ], 401);
+        }
+
+        // Revoke previous tokens
+        $user->tokens()->delete();
+
+        // Generate new sanctum token
+        $token = $user->createToken($request->email);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Login successful',
+            'data' => [
+                'user' => $user,
+                'token' => $token->plainTextToken,
+                'token_type' => 'bearer',
+                'expires_in' => config('auth.sanctum', 60) * 60
+            ]
+        ]);
+    }
+
+    public function me()
+    {
+        $user = Auth::user();
+
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'user' => $user
+            ]
+        ]);
+    }
+
+    public function logout(Request $request)
+    {
+        if (!auth()->check()) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $request->user()->tokens()->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Successfully logged out'
+        ]);
+    }
+
+    public function refresh(Request $request)
+    {
+        $user = Auth::user();
+
+        // Revoke the current access token
+        $request->user()->tokens()->delete();
+
+        // Generate a new token
+        $newToken = $user->createToken($user->email)->plainTextToken;
+
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'token' => $newToken,
+                'token_type' => 'Bearer',
+                'expires_in' => config('auth.passwords.users.expire') * 60
+            ]
+        ]);
+    }
     
 
 

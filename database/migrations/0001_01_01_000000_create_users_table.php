@@ -18,7 +18,7 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->integer('role')->default('2')->comment('1:admin, 2:customer');
-            $table->integer('status')->comment('-1->notverified,1->active(verified by admin),0->inactive')->default(1);
+            $table->integer('status')->comment('-1->notverified,1->active(verified by admin),0->inactive')->default(0);
             $table->rememberToken();
             $table->timestamps();
         });
