@@ -30,7 +30,7 @@ class AuthController extends Controller
             return response()->json([
                 'status' => false,
                 'error' => 'Validation Error',
-                'data' => array_values($validator->errors()->all()),
+                'data' => collect($validator->errors())->map(fn($messages) => $messages[0])->toArray(),
             ], 400);
         }
 
@@ -69,5 +69,42 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    public function verifyEmail(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
+            'otp' => 'required|string|size:6'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'error' => 'Validation Error',
+                'data' => collect($validator->errors())->map(fn($messages) => $messages[0])->toArray(),
+            ], 400);
+        }
+
+        $otpRecord = Otp::where('email', $request->email)
+            ->where('expires_at', '>', Carbon::now())
+            ->latest()
+            ->first();
+
+        if (!$otpRecord || !Hash::check($request->otp, $otpRecord->otp)) {
+            return response()->json(['status' => false, 'error' => 'Invalid or expired OTP'], 400);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        $user->email_verified_at = Carbon::now();
+        $user->save();
+
+        // Delete OTP record
+        $otpRecord->delete();
+
+        return response()->json(['status' => true, 'message' => 'Email verified successfully']);
+    }
+
+    
+
 
 }

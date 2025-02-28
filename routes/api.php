@@ -8,9 +8,11 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix("/auth")->group(function () {
-    Route::post('/signup', [AuthController::class, 'signup']);
+Route::prefix("auth")->group(function () {
+    Route::post('signup', [AuthController::class, 'signup']);
     Route::post('login', [AuthController::class, 'login']);
+    Route::post('verify-email', [AuthController::class, 'verifyEmail'])
+        ->name('password.email');
     Route::post('forgot-password', [AuthController::class, 'forgot-password'])
         ->name('password.email');
     Route::post('reset-password', [AuthController::class, 'reset-password'])
